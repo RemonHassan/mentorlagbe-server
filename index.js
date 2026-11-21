@@ -23,6 +23,7 @@ const connectedClient = await connectToMongoDB();
 const database = connectedClient.db("mentorlagbedb");
 const users = database.collection("user");
 const tuitions = database.collection("tuitions");
+const applications = database.collection("applications");
 // middlewear
 app.use(express.json());
 app.use(cors());
@@ -78,6 +79,22 @@ app.delete("/tuitions/:id", async (req, res) => {
   const id = req.params.id;
   const query = { _id: new ObjectId(id) };
   const result = await tuitions.deleteOne(query);
+  res.send(result);
+});
+
+// applications related API
+app.post("/applications", async (req, res) => {
+  const application = req.body;
+  const result = await applications.insertOne(application);
+  res.send(result);
+});
+app.get("/applications", async (req, res) => {
+  const query = {};
+  if (req.query.applicantId) {
+    query.userId = req.query.applicantId;
+  }
+  const cursor = applications.find(query);
+  const result = await cursor.toArray();
   res.send(result);
 });
 
