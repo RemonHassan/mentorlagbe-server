@@ -67,6 +67,12 @@ app.get("/tuitions", async (req, res) => {
   const result = await cursor.toArray();
   res.send(result);
 });
+app.get("/tuitions/:id", async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const result = await tuitions.findOne(query);
+  res.send(result);
+});
 // Delete tuition
 app.delete("/tuitions/:id", async (req, res) => {
   const id = req.params.id;
