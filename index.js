@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import "dotenv/config";
 // import Stripe from "stripe";
 
@@ -40,6 +40,18 @@ app.get("/users", async (req, res) => {
 app.post("/tuitions", async (req, res) => {
   const tuition = req.body;
   const result = await tuitions.insertOne(tuition);
+  res.send(result);
+});
+app.get("/tuitions", async (req, res) => {
+  const cursor = tuitions.find({});
+  const result = await cursor.toArray();
+  res.send(result);
+});
+// Delete tuition
+app.delete("/tuitions/:id", async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const result = await tuitions.deleteOne(query);
   res.send(result);
 });
 
