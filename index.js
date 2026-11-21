@@ -43,7 +43,27 @@ app.post("/tuitions", async (req, res) => {
   res.send(result);
 });
 app.get("/tuitions", async (req, res) => {
-  const cursor = tuitions.find({});
+  const query = {};
+  if (req.query) {
+    if (req.query.mode) {
+      query.mode = req.query.mode;
+    }
+    if (req.query.level) {
+      query.level = req.query.level;
+    }
+    if (req.query.duration) {
+      query.duration = req.query.duration;
+    }
+    if (req.query.search) {
+      query.$or = [
+        { title: { $regex: req.query.search, $options: "i" } },
+        { subject: { $regex: req.query.search, $options: "i" } },
+        { description: { $regex: req.query.search, $options: "i" } },
+      ];
+    }
+  }
+
+  const cursor = tuitions.find(query);
   const result = await cursor.toArray();
   res.send(result);
 });
