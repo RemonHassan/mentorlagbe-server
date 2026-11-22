@@ -104,8 +104,22 @@ app.get("/applications", async (req, res) => {
   if (req.query.applicantId) {
     query.userId = req.query.applicantId;
   }
+  if (req.query.tuitionId) {
+    query.tuitionId = req.query.tuitionId;
+  }
   const cursor = applications.find(query);
   const result = await cursor.toArray();
+  res.send(result);
+});
+app.patch("/applications/:id", async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const updatedDoc = {
+    $set: {
+      status: req.body.status,
+    },
+  };
+  const result = await applications.updateOne(query, updatedDoc);
   res.send(result);
 });
 app.get("/applications/count", async (req, res) => {
