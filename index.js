@@ -39,6 +39,12 @@ app.get("/users", async (req, res) => {
   const result = await cursor.toArray();
   res.send(result);
 });
+app.get("/users/:id/premium", async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const result = await users.findOne(query, { projection: { premium: 1 } });
+  res.send(result);
+});
 // TUition related API
 app.post("/tuitions", async (req, res) => {
   const tuition = req.body;
