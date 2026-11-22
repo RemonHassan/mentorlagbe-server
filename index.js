@@ -63,6 +63,9 @@ app.get("/tuitions", async (req, res) => {
     if (req.query.duration) {
       query.duration = req.query.duration;
     }
+    if (req.query.teacherId) {
+      query.teacherId = req.query.teacherId;
+    }
     if (req.query.search) {
       query.$or = [
         { title: { $regex: req.query.search, $options: "i" } },
