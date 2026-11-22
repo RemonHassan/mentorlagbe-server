@@ -2,10 +2,11 @@ import express from "express";
 import cors from "cors";
 import { MongoClient, ObjectId } from "mongodb";
 import "dotenv/config";
-// import Stripe from "stripe";
+import Stripe from "stripe";
 
 const app = express();
 const port = process.env.PORT || 4001;
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const client = new MongoClient(
   `mongodb://${process.env.DB_USER}:${process.env.DB_PASSWORD}@ac-3aksxmj-shard-00-00.p2ehjyi.mongodb.net:27017,ac-3aksxmj-shard-00-01.p2ehjyi.mongodb.net:27017,ac-3aksxmj-shard-00-02.p2ehjyi.mongodb.net:27017/?ssl=true&replicaSet=atlas-hic49m-shard-0&authSource=admin`,
@@ -24,6 +25,7 @@ const database = connectedClient.db("mentorlagbedb");
 const users = database.collection("user");
 const tuitions = database.collection("tuitions");
 const applications = database.collection("applications");
+const payments = database.collection("payments");
 // middlewear
 app.use(express.json());
 app.use(cors());
@@ -104,6 +106,43 @@ app.get("/applications/count", async (req, res) => {
   }
   const result = await applications.countDocuments(query);
   res.send({ count: result });
+});
+// payments related API
+app.post("/payments/checkout-verify", async (req, res) => {
+  const { sessionId } = req.body;
+  if (!sessionId) {
+    return res.send({ success: false, message: "Session ID is required" });
+  }
+  const { status, payment_status, payment_intent, customer_email, metadata } =
+    await stripe.checkout.sessions.retrieve(sessionId);
+  if (status === "complete" && payment_status === "paid") {
+    const sessionQuery = { sessionId };
+    const existingPayment = await payments.findOne(sessionQuery);
+    if (existingPayment) {
+      return res.send({ success: false, message: "Payment already verified" });
+    }
+    const payment = {
+      sessionId,
+      status,
+      payment_status,
+      payment_intent,
+      customer_email,
+      payment_date: new Date(),
+      userId: metadata.userId,
+    };
+    const result = await payments.insertOne(payment);
+    const query = { _id: new ObjectId(metadata.userId) };
+    const updatedDoc = {
+      $set: {
+        premium: true,
+      },
+    };
+    const updateResult = await users.updateOne(query, updatedDoc);
+    res.send({ success: true, result, updateResult });
+    return;
+  }
+
+  res.send({ success: false, message: "payment failed" });
 });
 
 app.listen(port, () => {
