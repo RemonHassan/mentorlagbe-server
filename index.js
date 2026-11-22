@@ -11,6 +11,11 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const client = new MongoClient(
   `mongodb://${process.env.DB_USER}:${process.env.DB_PASSWORD}@ac-3aksxmj-shard-00-00.p2ehjyi.mongodb.net:27017,ac-3aksxmj-shard-00-01.p2ehjyi.mongodb.net:27017,ac-3aksxmj-shard-00-02.p2ehjyi.mongodb.net:27017/?ssl=true&replicaSet=atlas-hic49m-shard-0&authSource=admin`,
 );
+const myLogger = (req, res, next) => {
+  console.log("now hitting api", req.url, req.headers);
+  next();
+};
+
 export async function connectToMongoDB() {
   try {
     await client.connect();
@@ -20,9 +25,11 @@ export async function connectToMongoDB() {
     console.dir(err);
   }
 }
+
 const connectedClient = await connectToMongoDB();
 const database = connectedClient.db("mentorlagbedb");
 const users = database.collection("user");
+const sessions = database.collection("sessions");
 const tuitions = database.collection("tuitions");
 const applications = database.collection("applications");
 const payments = database.collection("payments");
@@ -33,6 +40,43 @@ app.use(cors());
 app.get("/", (req, res) => {
   res.send("Hello mentorlagbee!");
 });
+const verifyToken = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    res.status(401).send({ message: "Unauthorized" });
+    return;
+  }
+  const token = authHeader.split(" ")[1];
+  if (!token) {
+    res.status(401).send({ message: "Unauthorized" });
+    return;
+  }
+  const query = { token };
+  const session = await sessions.findOne(query);
+  if (!session) {
+    res.status(401).send({ message: "Unauthorized" });
+    return;
+  }
+  const userId = session.userId;
+
+  const userQuery = { _id: new ObjectId(userId) };
+  const user = await users.findOne(userQuery);
+  if (!user) {
+    res.status(401).send({ message: "Unauthorized" });
+    return;
+  }
+
+  req.user = user;
+  next();
+};
+//
+const verifyStudent = async (req, res, next) => {
+  if (req.user.role !== "student") {
+    res.status(403).send({ message: "Forbidden" });
+    return;
+  }
+  next();
+};
 // USERS
 app.get("/users", async (req, res) => {
   const cursor = users.find({});
@@ -116,6 +160,18 @@ app.get("/applications", async (req, res) => {
     query.userId = req.query.applicantId;
   }
   if (req.query.tuitionId) {
+    //
+    //
+    //
+    // const tuitionQuery = { _id: new ObjectId(req.query.tuitionId) };
+    // const tuition = await tuitions.findOne(tuitionQuery);
+    // if (tuition.teacherId !== req.user._id.toString()) {
+    //   res.status(403).send({ message: "Forbidden" });
+    //   return;
+    // }
+    //
+    //
+    //
     query.tuitionId = req.query.tuitionId;
   }
   const cursor = applications.find(query);
@@ -182,3 +238,4 @@ app.post("/payments/checkout-verify", async (req, res) => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
+export default app;
