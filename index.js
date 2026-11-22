@@ -45,6 +45,17 @@ app.get("/users/:id/premium", async (req, res) => {
   const result = await users.findOne(query, { projection: { premium: 1 } });
   res.send(result);
 });
+app.patch("/users/:id/role", async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const updatedDoc = {
+    $set: {
+      role: req.body.role,
+    },
+  };
+  const result = await users.updateOne(query, updatedDoc);
+  res.send(result);
+});
 // TUition related API
 app.post("/tuitions", async (req, res) => {
   const tuition = req.body;
